@@ -1,0 +1,3 @@
+#!/usr/bin/bash
+echo "### set tmux title to $1 ###"
+printf "\033]2;$1\033\\"
