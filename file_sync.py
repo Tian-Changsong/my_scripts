@@ -13,6 +13,7 @@ def errExit(msg):
 def main(source_dir, target_dir):
     sync_file_count = 0
     sync_file_size = 0
+    ignore_files["Thumbs.db"]
  
     for root, dirs, files in os.walk(source_dir):
         relative_path = root.replace(source_dir, "")
@@ -25,6 +26,8 @@ def main(source_dir, target_dir):
  
         last_copy_folder = ""
         for fn0 in files:
+            if fn0 in ignore_files:
+                continue
             fn = os.sep.join([root, fn0])
             fn2 = os.sep.join([dist_path, fn0])
             is_copy = False
