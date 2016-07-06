@@ -13,7 +13,7 @@ def errExit(msg):
 def main(source_dir, target_dir):
     sync_file_count = 0
     sync_file_size = 0
-    ignore_files["Thumbs.db"]
+    ignore_files=["Thumbs.db"]
  
     for root, dirs, files in os.walk(source_dir):
         relative_path = root.replace(source_dir, "")
