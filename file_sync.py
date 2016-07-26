@@ -10,7 +10,7 @@ def errExit(msg):
     print msg
     sys.exit(1)
  
-def main(source_dir, target_dir):
+def main(source_dir, target_dir, small_file_target_fir=None):
     sync_file_count = 0
     sync_file_size = 0
     ignore_files=["Thumbs.db"]
@@ -20,6 +20,8 @@ def main(source_dir, target_dir):
         if len(relative_path) > 0 and relative_path[0] in ("/", "\\"):
             relative_path = relative_path[1:]
         dist_path = os.sep.join([target_dir, relative_path])
+        if small_file_target_fir:
+            dist_path_small = os.sep.join([small_file_target_fir, relative_path])
  
         if os.path.isdir(dist_path) == False:
             os.makedirs(dist_path)
