@@ -34,25 +34,63 @@ function GetTclIndent()
     let ppline = getline(ppnum)
 
     " Check for continuation line
-    if pline =~ '\\$'
+
+    " if previous line is continuation line
+    if Is_Continuation_Line(pline)
         let ind = ind + &sw
-        " If previous line is backslashed and its previous is also backslashed,
-        " current line should not indent again, so de-indent due to previous
-        " indention
         if ppnum != 0
             if ppline =~'\\$'
                 let ind = ind - &sw
             endif
         endif
-    elseif ppline =~ '\\$'
-        " if previous line is the end of backslashd lines, current line should
-        " be de-indent
-        let ind = ind - &sw
+    elseif pline =~ "[]}]\s*$" || pline =~ "[]}]\s*;.*$"
+        let pos = matchend(pline, '.*[]}]')
+        call cursor(pnum, pos)
+        let [match_pair_lnum, match_pair_col] = Find_Matching_Pair()
+        let match_pair_line = getline(match_pair_lnum)
+        if Is_Continuation_Line(match_pair_line)
+            let ind = indent(match_pair_lnum)
+        else
+            let match_pair_pnum = prevnonblank(match_pair_lnum-1)
+            let match_pair_pline=getline(match_pair_pnum)
+            if Is_Continuation_Line(match_pair_pline)
+                let ind = ind - &sw
+            endif
+        endif
+    " if previous line is not continuation line
+    else 
+        " if its previous-previous line is continuation line
+        if Is_Continuation_Line(ppline)
+            " check if previous line starts a new block which starts with '{' or
+            " '['
+            let braceclass = '[[{]'
+            let bracepos = match(pline, braceclass, matchend(pline, '.*[]}]'))
+            if bracepos == -1
+                let ind = ind - &sw
+            endif
+        endif
+
     endif
+
+    " Set current line indention according to previous line, if previous line
+    " is a single closing brace or bracket does not de-indent because itself has de-indented
+    let braceclass = '[][{}]'
+    let bracepos = match(pline, braceclass, matchend(pline, '^\s*[]}]'))
+    while bracepos != -1
+        let brace = strpart(pline, bracepos, 1)
+        if brace == '{' || brace == '['
+            " each '{' causes indent, '[' does not
+            let ind = ind + &sw
+        else
+            " each ']' and '}' causes de-indent
+            let ind = ind - &sw
+        endif
+        let bracepos = match(pline, braceclass, bracepos + 1)
+    endwhile
 
     " Check for single closing brace on current line
     if line =~ '^\s*}'
-        let pos = match(line, '}')
+        let pos = matchend(line, '}')
         call cursor(v:lnum, pos)
         let [match_pair_lnum, match_pair_col] = Find_Matching_Pair()
         let ind = indent(match_pair_lnum)
@@ -60,28 +98,20 @@ function GetTclIndent()
 
     " Check for single closing bracket on current line, a single closing bracket means a backslash in previous line
     if line =~ '^\s*]'
-        let ind	= ind - &sw
-    endif
-
-    " Set current line indention according to previous line, if previous line
-    " is a single closing brace or bracket does not de-indent because itself has de-indented
-    if pline !~ '^\s*}\s*$' && pline !~ '^\s*]\s*$'
-        let braceclass = '[][{}]'
-        let bracepos = match(pline, braceclass, matchend(pline, '^\s*[]}]'))
-        while bracepos != -1
-            let brace = strpart(pline, bracepos, 1)
-            if brace == '{' || brace == '['
-                " each '{' causes indent, '[' does not
-                let ind = ind + &sw
-            else
-                " each ']' and '}' causes de-indent
-                let ind = ind - &sw
-            endif
-            let bracepos = match(pline, braceclass, bracepos + 1)
-        endwhile
+        let pos = matchend(line, ']')
+        call cursor(v:lnum, pos)
+        let [match_pair_lnum, match_pair_col] = Find_Matching_Pair()
+        let ind = indent(match_pair_lnum)
     endif
 
     return ind
+endfunction
+function! Is_Continuation_Line(line)
+    if a:line =~ '\\$'
+        return 1
+    else 
+        return 0
+    endif
 endfunction
 function! Find_Matching_Pair()
     let c_lnum = line('.')
@@ -127,7 +157,7 @@ function! Find_Matching_Pair()
     "execute 'if' s_skip '| let s_skip = 0 | endif'
 
     " Limit the search to lines visible in the window.
-    let [m_lnum, m_col] = searchpairpos(c, '', c2, s_flags, s_skip, stopline, timeout)
+    let [m_lnum, m_col] = searchpairpos(c, '', c2, s_flags)
     return [m_lnum, m_col]
 endfunction
 
